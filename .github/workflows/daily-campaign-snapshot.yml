@@ -1,0 +1,49 @@
+name: Daily campaign snapshot (push to Boltable)
+
+on:
+  schedule:
+    - cron: "0 11 * * *"  # ~13:00 Cyprus
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: campaign-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: boltable/wolt-cy-campaigns
+          token: ${{ secrets.BOLTABLE_REPO_TOKEN }}
+          path: app
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch Wolt CY + render diary
+        working-directory: app
+        env:
+          WOLT_ACCESS_TOKEN: ${{ secrets.WOLT_ACCESS_TOKEN }}
+          WOLT_REFRESH_TOKEN: ${{ secrets.WOLT_REFRESH_TOKEN }}
+        run: bash run_campaign_ci.sh
+
+      - name: Push snapshot to boltable repo (triggers Boltable deploy)
+        working-directory: app
+        env:
+          GH_TOKEN: ${{ secrets.BOLTABLE_REPO_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add snapshots/*.json preview/campaign-*.html public/
+          if git diff --staged --quiet; then
+            echo "No changes."
+            exit 0
+          fi
+          git commit -m "chore: daily campaign snapshot $(date -u +%Y-%m-%d)"
+          git push
