@@ -2,13 +2,19 @@ name: Daily campaign snapshot (push to Boltable)
 
 on:
   schedule:
-    # 13:17 Cyprus (Asia/Nicosia handles DST). Avoid :00 UTC — GitHub often drops those.
-    - cron: "17 13 * * *"
-      timezone: Asia/Nicosia
-    # Backup slot if the primary schedule is dropped during high load.
-    - cron: "47 13 * * *"
-      timezone: Asia/Nicosia
+    # Staggered UTC wake-ups (≈12:12–14:42 Cyprus summer). GitHub often drops :00
+    # crons and sometimes skips a repo entirely — many slots + in-job wait helps.
+    - cron: "12 9 * * *"
+    - cron: "42 9 * * *"
+    - cron: "12 10 * * *"
+    - cron: "42 10 * * *"
+    - cron: "12 11 * * *"
+    - cron: "42 11 * * *"
+    - cron: "17 10 * * *"
+    - cron: "47 10 * * *"
   workflow_dispatch:
+  repository_dispatch:
+    types: [daily-snapshot]
 
 permissions:
   contents: read
@@ -20,35 +26,107 @@ concurrency:
 jobs:
   snapshot:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
+      - name: Resolve today's date (Cyprus)
+        id: day
+        run: |
+          TODAY=$(TZ=Asia/Nicosia date +%Y-%m-%d)
+          echo "today=$TODAY" >> "$GITHUB_OUTPUT"
+          echo "Cyprus date: $TODAY"
+
+      - name: Skip if today's snapshot already exists
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.BOLTABLE_REPO_TOKEN }}
+        run: |
+          TODAY="${{ steps.day.outputs.today }}"
+          if gh api "repos/boltable/wolt-cy-campaigns/contents/snapshots/${TODAY}.json" &>/dev/null; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Snapshot for ${TODAY} already exists."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            echo "No snapshot for ${TODAY} yet — will fetch."
+          fi
+
+      - name: Wait until 13:17 Cyprus (scheduled runs only)
+        if: steps.check.outputs.skip != 'true' && github.event_name == 'schedule'
+        run: |
+          python3 <<'PY'
+          import time
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+
+          tz = ZoneInfo("Asia/Nicosia")
+          while True:
+              now = datetime.now(tz)
+              if now.hour > 14 or (now.hour == 14 and now.minute > 30):
+                  print("Backup window — running now.")
+                  break
+              if now.hour > 13 or (now.hour == 13 and now.minute >= 17):
+                  print(f"Snapshot window open ({now:%H:%M} Cyprus).")
+                  break
+              print(f"Waiting until 13:17 Cyprus (now {now:%H:%M})…")
+              time.sleep(30)
+          PY
+
       - uses: actions/checkout@v4
+        if: steps.check.outputs.skip != 'true'
         with:
           repository: boltable/wolt-cy-campaigns
           token: ${{ secrets.BOLTABLE_REPO_TOKEN }}
           path: app
 
       - uses: actions/setup-python@v5
+        if: steps.check.outputs.skip != 'true'
         with:
           python-version: "3.12"
 
       - name: Fetch Wolt CY + render diary
+        if: steps.check.outputs.skip != 'true'
         working-directory: app
         env:
           WOLT_ACCESS_TOKEN: ${{ secrets.WOLT_ACCESS_TOKEN }}
           WOLT_REFRESH_TOKEN: ${{ secrets.WOLT_REFRESH_TOKEN }}
         run: bash run_campaign_ci.sh
 
+      - name: Verify snapshot before push
+        if: steps.check.outputs.skip != 'true'
+        working-directory: app
+        run: |
+          TODAY="${{ steps.day.outputs.today }}"
+          FILE="snapshots/${TODAY}.json"
+          if [ ! -f "$FILE" ]; then
+            echo "ERROR: expected $FILE after fetch" >&2
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json, os, sys
+          from pathlib import Path
+          today = os.environ["TODAY"]
+          data = json.loads(Path(f"snapshots/{today}.json").read_text())
+          count = data.get("banner_count", 0)
+          print(f"guest banner_count={count}")
+          if count < 5:
+              print("ERROR: snapshot has too few banners — refusing to publish", file=sys.stderr)
+              sys.exit(1)
+          PY
+        env:
+          TODAY: ${{ steps.day.outputs.today }}
+
       - name: Push snapshot to boltable repo (triggers Boltable deploy)
+        if: steps.check.outputs.skip != 'true'
         working-directory: app
         env:
           GH_TOKEN: ${{ secrets.BOLTABLE_REPO_TOKEN }}
         run: |
+          TODAY="${{ steps.day.outputs.today }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add snapshots/*.json preview/campaign-*.html public/
           if git diff --staged --quiet; then
-            echo "No changes."
+            echo "No changes to commit."
             exit 0
           fi
-          git commit -m "chore: daily campaign snapshot $(date -u +%Y-%m-%d)"
+          git commit -m "chore: daily campaign snapshot ${TODAY}"
           git push

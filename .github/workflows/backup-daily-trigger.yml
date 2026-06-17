@@ -1,0 +1,33 @@
+name: Backup daily trigger
+
+on:
+  schedule:
+    # If the main workflow schedule is dropped, try to dispatch it manually.
+    - cron: "22 9 * * *"
+    - cron: "52 9 * * *"
+    - cron: "22 10 * * *"
+    - cron: "52 10 * * *"
+    - cron: "22 11 * * *"
+    - cron: "52 11 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  poke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch snapshot workflow if today is missing
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_TRIGGER_PAT }}
+        run: |
+          set -euo pipefail
+          TODAY=$(TZ=Asia/Nicosia date +%Y-%m-%d)
+          if gh api "repos/boltable/wolt-cy-campaigns/contents/snapshots/${TODAY}.json" &>/dev/null; then
+            echo "Snapshot for ${TODAY} exists — OK."
+            exit 0
+          fi
+          echo "No snapshot for ${TODAY} — dispatching main workflow."
+          gh api --method POST \
+            repos/ioannissocratous-dotcom/wolt-cy-campaigns-cron/actions/workflows/daily-campaign-snapshot.yml/dispatches \
+            -f ref=main
