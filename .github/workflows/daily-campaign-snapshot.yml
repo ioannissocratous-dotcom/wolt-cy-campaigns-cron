@@ -2,7 +2,12 @@ name: Daily campaign snapshot (push to Boltable)
 
 on:
   schedule:
-    - cron: "0 10 * * *"  # 10:00 UTC = 13:00 Cyprus (EEST); 12:00 in winter (EET)
+    # 13:17 Cyprus (Asia/Nicosia handles DST). Avoid :00 UTC — GitHub often drops those.
+    - cron: "17 13 * * *"
+      timezone: Asia/Nicosia
+    # Backup slot if the primary schedule is dropped during high load.
+    - cron: "47 13 * * *"
+      timezone: Asia/Nicosia
   workflow_dispatch:
 
 permissions:
