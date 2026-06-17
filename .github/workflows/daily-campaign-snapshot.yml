@@ -2,7 +2,7 @@ name: Daily campaign snapshot (push to Boltable)
 
 on:
   schedule:
-    - cron: "0 11 * * *"  # ~13:00 Cyprus
+    - cron: "0 10 * * *"  # 10:00 UTC = 13:00 Cyprus (EEST); 12:00 in winter (EET)
   workflow_dispatch:
 
 permissions:
