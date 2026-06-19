@@ -4,15 +4,16 @@ Runs daily on **your personal GitHub Actions** (bypasses boltable org Actions bl
 
 Pushes snapshots to `boltable/wolt-cy-campaigns` → Boltable auto-deploys.
 
-## How it runs (3 layers)
+## How it runs (4 layers)
 
-| Layer | Workflow | When |
-|-------|----------|------|
-| **1. Dispatcher** | `scheduled-dispatcher.yml` | ~13:17–16:00 Cyprus (GitHub schedule) |
-| **2. Watchdog** | `missed-snapshot-watchdog.yml` | ~16:15 Cyprus — fails if still missing |
-| **3. External backup** | cron-job.org → `repository_dispatch` | 13:20 Cyprus (optional, most reliable) |
+| Layer | Where | When |
+|-------|-------|------|
+| **1. Public pinger** | [`wolt-cy-cron-pinger`](https://github.com/ioannissocratous-dotcom/wolt-cy-cron-pinger) (public repo) | 13:18, 14:30, 15:00 Cyprus |
+| **2. Dispatcher** | `scheduled-dispatcher.yml` (this repo) | 13:17–16:00 Cyprus |
+| **3. Watchdog** | `missed-snapshot-watchdog.yml` | ~16:15 Cyprus — fails if still missing |
+| **4. External backup** | cron-job.org (optional) | `./scripts/setup_external_cron.sh` |
 
-The heavy fetch job (`daily-campaign-snapshot.yml`) is **never scheduled directly** — only dispatched, so skipped GitHub crons don't block a clean retry.
+The heavy fetch job (`daily-campaign-snapshot.yml`) is **never scheduled directly** — only dispatched. If today's snapshot already exists, it exits in ~10s.
 
 ## Manual run
 
