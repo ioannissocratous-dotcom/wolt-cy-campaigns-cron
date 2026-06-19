@@ -1,17 +1,6 @@
 name: Daily campaign snapshot (push to Boltable)
 
 on:
-  schedule:
-    # Staggered UTC wake-ups (≈12:12–14:42 Cyprus summer). GitHub often drops :00
-    # crons and sometimes skips a repo entirely — many slots + in-job wait helps.
-    - cron: "12 9 * * *"
-    - cron: "42 9 * * *"
-    - cron: "12 10 * * *"
-    - cron: "42 10 * * *"
-    - cron: "12 11 * * *"
-    - cron: "42 11 * * *"
-    - cron: "17 10 * * *"
-    - cron: "47 10 * * *"
   workflow_dispatch:
   repository_dispatch:
     types: [daily-snapshot]
@@ -48,27 +37,6 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
             echo "No snapshot for ${TODAY} yet — will fetch."
           fi
-
-      - name: Wait until 13:17 Cyprus (scheduled runs only)
-        if: steps.check.outputs.skip != 'true' && github.event_name == 'schedule'
-        run: |
-          python3 <<'PY'
-          import time
-          from datetime import datetime
-          from zoneinfo import ZoneInfo
-
-          tz = ZoneInfo("Asia/Nicosia")
-          while True:
-              now = datetime.now(tz)
-              if now.hour > 14 or (now.hour == 14 and now.minute > 30):
-                  print("Backup window — running now.")
-                  break
-              if now.hour > 13 or (now.hour == 13 and now.minute >= 17):
-                  print(f"Snapshot window open ({now:%H:%M} Cyprus).")
-                  break
-              print(f"Waiting until 13:17 Cyprus (now {now:%H:%M})…")
-              time.sleep(30)
-          PY
 
       - uses: actions/checkout@v4
         if: steps.check.outputs.skip != 'true'

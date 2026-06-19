@@ -1,0 +1,45 @@
+name: Scheduled snapshot dispatcher
+
+on:
+  schedule:
+    # Lightweight wake-ups. Main job is dispatched, not scheduled directly.
+    # 10:17 UTC = 13:17 Cyprus (EEST) — primary slot
+    - cron: "17 10 * * *"
+    - cron: "32 10 * * *"
+    - cron: "47 10 * * *"
+    # Afternoon catch-up if GitHub skips the morning (11:30–13:00 UTC = 14:30–16:00 Cyprus)
+    - cron: "30 11 * * *"
+    - cron: "0 12 * * *"
+    - cron: "30 12 * * *"
+    - cron: "0 13 * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: snapshot-dispatcher
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Dispatch snapshot workflow if today is missing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BOLTABLE_TOKEN: ${{ secrets.BOLTABLE_REPO_TOKEN }}
+        run: |
+          set -euo pipefail
+          TODAY=$(TZ=Asia/Nicosia date +%Y-%m-%d)
+          if gh api "repos/boltable/wolt-cy-campaigns/contents/snapshots/${TODAY}.json" \
+              --header "Authorization: Bearer ${BOLTABLE_TOKEN}" &>/dev/null; then
+            echo "Snapshot for ${TODAY} exists — nothing to do."
+            exit 0
+          fi
+          echo "No snapshot for ${TODAY} — dispatching main workflow."
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/daily-campaign-snapshot.yml/dispatches" \
+            -f ref=main
