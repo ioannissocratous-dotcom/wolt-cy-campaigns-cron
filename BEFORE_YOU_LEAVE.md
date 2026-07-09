@@ -59,11 +59,11 @@ If you also paste the same GitHub token in Boltable Portal:
 | ~13:20 | cron-job.org → GitHub Actions |
 | ~15:30 | cron-job.org backup (skips if snapshot exists) |
 
-Site: https://wolt-cy-campaigns.boltable.eu
+Site: https://wolt-campaigns-diary.boltable.eu
 
 ## Recent snapshot log
 
-Check `snapshots/` in https://github.com/boltable/wolt-cy-campaigns
+Check `snapshots/` in https://github.com/boltable/wolt-campaigns-diary
 
 If a day is missing, manual run:
 https://github.com/ioannissocratous-dotcom/wolt-cy-campaigns-cron/actions/workflows/daily-campaign-snapshot.yml → **Run workflow**

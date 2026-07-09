@@ -30,7 +30,7 @@ jobs:
           GH_TOKEN: ${{ secrets.BOLTABLE_REPO_TOKEN }}
         run: |
           TODAY="${{ steps.day.outputs.today }}"
-          if gh api "repos/boltable/wolt-cy-campaigns/contents/snapshots/${TODAY}.json" &>/dev/null; then
+          if gh api "repos/boltable/wolt-campaigns-diary/contents/snapshots/${TODAY}.json" &>/dev/null; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
             echo "Snapshot for ${TODAY} already exists."
           else
@@ -41,7 +41,7 @@ jobs:
       - uses: actions/checkout@v4
         if: steps.check.outputs.skip != 'true'
         with:
-          repository: boltable/wolt-cy-campaigns
+          repository: boltable/wolt-campaigns-diary
           token: ${{ secrets.BOLTABLE_REPO_TOKEN }}
           path: app
 
@@ -61,7 +61,7 @@ jobs:
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          CAMPAIGN_DIARY_URL: https://wolt-cy-campaigns.boltable.eu
+          CAMPAIGN_DIARY_URL: https://wolt-campaigns-diary.boltable.eu
         run: bash run_campaign_ci.sh
 
       - name: Verify snapshot before push

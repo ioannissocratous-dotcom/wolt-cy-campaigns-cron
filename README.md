@@ -1,6 +1,6 @@
 # Wolt CY campaign cron
 
-Runs daily snapshot → pushes to `boltable/wolt-cy-campaigns` → Boltable deploys.
+Runs daily snapshot → pushes to `boltable/wolt-campaigns-diary` → Boltable deploys.
 
 ## How it runs (no Mac needed)
 
