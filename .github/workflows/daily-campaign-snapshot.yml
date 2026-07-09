@@ -80,24 +80,20 @@ jobs:
           today = os.environ["TODAY"]
           data = json.loads(Path(f"snapshots/{today}.json").read_text())
           if data.get("countries"):
-              cy = data["countries"].get("CY", {})
-              mt = data["countries"].get("MT", {})
-              ee = data["countries"].get("EE", {})
-              cy_count = cy.get("banner_count", 0)
-              mt_count = mt.get("banner_count", 0)
-              ee_count = ee.get("banner_count", 0)
-              print(f"CY guest banner_count={cy_count}")
-              print(f"MT guest banner_count={mt_count}")
-              print(f"EE guest banner_count={ee_count}")
-              if cy_count < 5:
-                  print("ERROR: CY snapshot has too few banners — refusing to publish", file=sys.stderr)
-                  sys.exit(1)
-              if mt_count < 3:
-                  print("ERROR: MT snapshot has too few banners — refusing to publish", file=sys.stderr)
-                  sys.exit(1)
-              if ee_count < 5:
-                  print("ERROR: EE snapshot has too few banners — refusing to publish", file=sys.stderr)
-                  sys.exit(1)
+              from campaign_countries import CAMPAIGN_COUNTRY_ORDER, MIN_EXPECTED_BANNERS
+              for code in CAMPAIGN_COUNTRY_ORDER:
+                  blob = data["countries"].get(code, {})
+                  if not blob:
+                      continue
+                  count = blob.get("banner_count", 0)
+                  min_expected = MIN_EXPECTED_BANNERS.get(code, 3)
+                  print(f"{code} guest banner_count={count}")
+                  if count < min_expected:
+                      print(
+                          f"ERROR: {code} snapshot has too few banners — refusing to publish",
+                          file=sys.stderr,
+                      )
+                      sys.exit(1)
           else:
               count = data.get("banner_count", 0)
               print(f"guest banner_count={count}")
