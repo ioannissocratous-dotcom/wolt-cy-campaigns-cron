@@ -79,11 +79,25 @@ jobs:
           from pathlib import Path
           today = os.environ["TODAY"]
           data = json.loads(Path(f"snapshots/{today}.json").read_text())
-          count = data.get("banner_count", 0)
-          print(f"guest banner_count={count}")
-          if count < 5:
-              print("ERROR: snapshot has too few banners — refusing to publish", file=sys.stderr)
-              sys.exit(1)
+          if data.get("countries"):
+              cy = data["countries"].get("CY", {})
+              mt = data["countries"].get("MT", {})
+              cy_count = cy.get("banner_count", 0)
+              mt_count = mt.get("banner_count", 0)
+              print(f"CY guest banner_count={cy_count}")
+              print(f"MT guest banner_count={mt_count}")
+              if cy_count < 5:
+                  print("ERROR: CY snapshot has too few banners — refusing to publish", file=sys.stderr)
+                  sys.exit(1)
+              if mt_count < 3:
+                  print("ERROR: MT snapshot has too few banners — refusing to publish", file=sys.stderr)
+                  sys.exit(1)
+          else:
+              count = data.get("banner_count", 0)
+              print(f"guest banner_count={count}")
+              if count < 5:
+                  print("ERROR: snapshot has too few banners — refusing to publish", file=sys.stderr)
+                  sys.exit(1)
           PY
         env:
           TODAY: ${{ steps.day.outputs.today }}
