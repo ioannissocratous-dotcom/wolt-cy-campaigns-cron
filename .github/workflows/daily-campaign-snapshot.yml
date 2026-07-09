@@ -50,7 +50,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Fetch Wolt CY + render diary
+      - name: Fetch Wolt campaigns + render diary
         if: steps.check.outputs.skip != 'true'
         working-directory: app
         env:
@@ -82,15 +82,21 @@ jobs:
           if data.get("countries"):
               cy = data["countries"].get("CY", {})
               mt = data["countries"].get("MT", {})
+              ee = data["countries"].get("EE", {})
               cy_count = cy.get("banner_count", 0)
               mt_count = mt.get("banner_count", 0)
+              ee_count = ee.get("banner_count", 0)
               print(f"CY guest banner_count={cy_count}")
               print(f"MT guest banner_count={mt_count}")
+              print(f"EE guest banner_count={ee_count}")
               if cy_count < 5:
                   print("ERROR: CY snapshot has too few banners — refusing to publish", file=sys.stderr)
                   sys.exit(1)
               if mt_count < 3:
                   print("ERROR: MT snapshot has too few banners — refusing to publish", file=sys.stderr)
+                  sys.exit(1)
+              if ee_count < 5:
+                  print("ERROR: EE snapshot has too few banners — refusing to publish", file=sys.stderr)
                   sys.exit(1)
           else:
               count = data.get("banner_count", 0)
