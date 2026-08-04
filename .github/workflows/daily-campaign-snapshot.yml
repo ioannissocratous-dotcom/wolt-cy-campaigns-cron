@@ -50,7 +50,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Fetch campaigns (Wolt + Foody CY) + render diary
+      - name: Fetch campaigns (Wolt + Foody CY + Uber Eats PT) + render diary
         if: steps.check.outputs.skip != 'true'
         working-directory: app
         env:
@@ -101,6 +101,16 @@ jobs:
               if foody_n < 1:
                   print(
                       "ERROR: CY Foody hero carousel missing — refusing to publish",
+                      file=sys.stderr,
+                  )
+                  sys.exit(1)
+              pt = data["countries"].get("PT") or {}
+              ue = (pt.get("platforms") or {}).get("uber_eats") or {}
+              ue_n = int(ue.get("banner_count") or 0)
+              print(f"PT Uber Eats promo banner_count={ue_n}")
+              if ue_n < 1:
+                  print(
+                      "ERROR: PT Uber Eats promo carousel missing — refusing to publish",
                       file=sys.stderr,
                   )
                   sys.exit(1)
