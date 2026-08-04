@@ -50,7 +50,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Fetch Wolt campaigns + render diary
+      - name: Fetch campaigns (Wolt + Foody CY) + render diary
         if: steps.check.outputs.skip != 'true'
         working-directory: app
         env:
@@ -94,6 +94,16 @@ jobs:
                           file=sys.stderr,
                       )
                       sys.exit(1)
+              cy = data["countries"].get("CY") or {}
+              foody = (cy.get("platforms") or {}).get("foody") or {}
+              foody_n = int(foody.get("banner_count") or 0)
+              print(f"CY Foody hero banner_count={foody_n}")
+              if foody_n < 1:
+                  print(
+                      "ERROR: CY Foody hero carousel missing — refusing to publish",
+                      file=sys.stderr,
+                  )
+                  sys.exit(1)
           else:
               count = data.get("banner_count", 0)
               print(f"guest banner_count={count}")
