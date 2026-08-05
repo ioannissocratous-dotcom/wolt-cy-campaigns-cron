@@ -50,7 +50,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Fetch campaigns (Wolt + Foody CY + Uber Eats PT) + render diary
+      - name: Fetch campaigns (Wolt + Foody CY + Uber Eats PT/PL/KE) + render diary
         if: steps.check.outputs.skip != 'true'
         working-directory: app
         env:
@@ -114,6 +114,17 @@ jobs:
                       file=sys.stderr,
                   )
                   sys.exit(1)
+              for code in ("PL", "KE"):
+                  blob = data["countries"].get(code) or {}
+                  ue = (blob.get("platforms") or {}).get("uber_eats") or {}
+                  n = int(ue.get("banner_count") or 0)
+                  print(f"{code} Uber Eats promo banner_count={n}")
+                  if n < 1:
+                      print(
+                          f"ERROR: {code} Uber Eats promo carousel missing — refusing to publish",
+                          file=sys.stderr,
+                      )
+                      sys.exit(1)
           else:
               count = data.get("banner_count", 0)
               print(f"guest banner_count={count}")
