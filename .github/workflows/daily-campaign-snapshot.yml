@@ -1,6 +1,9 @@
 name: Daily campaign snapshot (push to Boltable)
 
 on:
+  schedule:
+    # 10:20 Cyprus (UTC+3) ≈ 07:20 UTC — primary daily trigger
+    - cron: "20 7 * * *"
   workflow_dispatch:
   repository_dispatch:
     types: [daily-snapshot]
@@ -39,26 +42,12 @@ jobs:
           fi
 
       - uses: actions/checkout@v4
-        if: steps.check.outputs.skip != 'true'
-        with:
-          repository: boltable/campaigns-diary
-          token: ${{ secrets.BOLTABLE_REPO_TOKEN }}
-          path: app
-
-      - uses: actions/checkout@v4
-        if: steps.check.outputs.skip == 'true'
         with:
           repository: boltable/campaigns-diary
           token: ${{ secrets.BOLTABLE_REPO_TOKEN }}
           path: app
 
       - uses: actions/setup-python@v5
-        if: steps.check.outputs.skip != 'true'
-        with:
-          python-version: "3.12"
-
-      - uses: actions/setup-python@v5
-        if: steps.check.outputs.skip == 'true'
         with:
           python-version: "3.12"
 
@@ -66,6 +55,7 @@ jobs:
         if: steps.check.outputs.skip != 'true'
         working-directory: app
         env:
+          GITHUB_ACTIONS: "true"
           WOLT_ACCESS_TOKEN: ${{ secrets.WOLT_ACCESS_TOKEN }}
           WOLT_REFRESH_TOKEN: ${{ secrets.WOLT_REFRESH_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -73,7 +63,7 @@ jobs:
           SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          CAMPAIGN_DIARY_URL: https://campaigns-diary.boltable.eu
+          CAMPAIGN_DIARY_URL: https://wolt-cy-campaigns.boltable.eu
         run: bash run_campaign_ci.sh
 
       - name: Refresh competitors only (snapshot already exists for today)
